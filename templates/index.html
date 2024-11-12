@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD de Pessoas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <h1>Cadastro de Pessoas</h1>
+
+    <form action="/pessoa" method="POST" class="form">
+        <input type="text" name="nome" placeholder="Nome" required>
+        <input type="number" name="idade" placeholder="Idade" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <button type="submit">Criar Pessoa</button>
+    </form>
+
+    <h2>Pessoas Cadastradas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Idade</th>
+                <th>Email</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pessoa in pessoas %}
+                <tr>
+                    <td>{{ pessoa[0] }}</td>
+                    <td>{{ pessoa[1] }}</td>
+                    <td>{{ pessoa[2] }}</td>
+                    <td>{{ pessoa[3] }}</td>
+                    <td>
+                        <a href="/pessoa/{{ pessoa[0] }}">Editar</a> |
+                        <a href="/excluir/{{ pessoa[0] }}">Excluir</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

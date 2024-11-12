@@ -1,0 +1,36 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "api/index.py",
+        "use": "@vercel/python"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/",
+        "dest": "/api/index.py"
+      },
+      {
+        "src": "/contato",
+        "dest": "/api/index.py"
+      },
+      {
+        "src": "/sobre",
+        "dest": "/api/index.py"
+      },
+      {
+        "src": "/portfolio",
+        "dest": "/api/index.py"
+      },
+      {
+        "src": "/api/cervejas",
+        "dest": "/api/index.py"
+      },
+      {
+        "src": "/api/livros",
+        "dest": "/api/index.py"
+      }  
+    ]
+  }
+  

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Pessoa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <h1>Editar Pessoa</h1>
+
+    <form action="/editar/{{ pessoa[0] }}" method="POST" class="form">
+        <input type="text" name="nome" value="{{ pessoa[1] }}" required>
+        <input type="number" name="idade" value="{{ pessoa[2] }}" required>
+        <input type="email" name="email" value="{{ pessoa[3] }}" required>
+        <button type="submit">Atualizar Pessoa</button>
+    </form>
+
+    <br>
+    <a href="/">Voltar para a lista de pessoas</a>
+
+</body>
+</html>
