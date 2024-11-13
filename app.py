@@ -1,94 +1,82 @@
-import sqlite3  # Adicione a importação do sqlite3
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
+# Configuração da conexão com o banco de dados PostgreSQL
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://default:Ew4LKOoIpBv5@ep-falling-hall-a43wfsot.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desabilita rastreabilidade de modificações
 
-# Função para conectar ao banco de dados SQLite
-def conectar():
-    conn = sqlite3.connect('pessoas.db')  # Conectando ao banco de dados SQLite
-    return conn
+db = SQLAlchemy(app)
 
-# Criar a tabela 'pessoa' no banco de dados
-def criar_tabela():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS pessoa (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        nome TEXT NOT NULL,
-                        idade INTEGER NOT NULL,
-                        email TEXT NOT NULL)''')
-    conn.commit()
-    conn.close()
+# Definindo o modelo de dados (Tabela "pessoa")
+class Pessoa(db.Model):
+    __tablename__ = 'pessoa'  # Nome da tabela no banco
 
-# Criar uma nova pessoa (agora com a rota '/pessoa')
-@app.route('/pessoa', methods=['POST'])
-def criar_pessoa():
-    nome = request.form['nome']
-    idade = request.form['idade']
-    email = request.form['email']
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(80), nullable=False)
+    idade = db.Column(db.Integer, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
 
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO pessoa (nome, idade, email) VALUES (?, ?, ?)', (nome, idade, email))
-    conn.commit()
-    conn.close()
+    def __repr__(self):
+        return f'<Pessoa {self.nome}>'
 
-    # Redireciona de volta para a página inicial (index)
-    return "Cadastro realizado com sucesso!"
-
+# Criar as tabelas no banco de dados (em vez de usar @app.before_first_request)
+def create_tables():
+    with app.app_context():
+        db.create_all()  # Cria as tabelas no banco de dados
 
 # Página inicial que redireciona para /pessoas
 @app.route('/')
 def home():
     return redirect(url_for('pessoas'))  # Redireciona para a rota que lista as pessoas
 
-# Página que lista as pessoas
+# Página que lista todas as pessoas
 @app.route('/pessoas')
 def pessoas():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM pessoa')
-    pessoas = cursor.fetchall()
-    conn.close()
+    pessoas = Pessoa.query.all()  # Consulta todas as pessoas
+    return render_template('index.html', pessoas=pessoas)  # Renderiza a página com a lista
 
-    # Renderiza a página de listagem com as pessoas
-    return render_template('index.html', pessoas=pessoas)
+# Criar uma nova pessoa
+@app.route('/pessoa', methods=['POST'])
+def criar_pessoa():
+    nome = request.form['nome']
+    idade = request.form['idade']
+    email = request.form['email']
 
+    # Cria um novo objeto Pessoa e adiciona ao banco
+    nova_pessoa = Pessoa(nome=nome, idade=idade, email=email)
+    db.session.add(nova_pessoa)
+    db.session.commit()
+
+    return redirect(url_for('pessoas'))  # Redireciona para a página que lista as pessoas
 
 # Excluir uma pessoa
 @app.route('/excluir/<int:id>', methods=['GET'])
 def excluir(id):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM pessoa WHERE id = ?', (id,))
-    conn.commit()
-    conn.close()
-
-    # Redireciona para a página que lista as pessoas
-    return redirect(url_for('pessoas'))  # Altere de 'index' para 'pessoas'
-
+    pessoa = Pessoa.query.get(id)
+    if pessoa:
+        db.session.delete(pessoa)
+        db.session.commit()
+    return redirect(url_for('pessoas'))  # Redireciona para a lista de pessoas
 
 # Editar uma pessoa
 @app.route('/pessoa/<int:id>', methods=['GET', 'POST'])
 def editar(id):
-    conn = conectar()
-    cursor = conn.cursor()
-    if request.method == 'POST':
-        nome = request.form['nome']
-        idade = request.form['idade']
-        email = request.form['email']
-        cursor.execute('''UPDATE pessoa SET nome = ?, idade = ?, email = ? WHERE id = ?''', 
-                       (nome, idade, email, id))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
+    pessoa = Pessoa.query.get(id)
 
-    cursor.execute('SELECT * FROM pessoa WHERE id = ?', (id,))
-    pessoa = cursor.fetchone()
-    conn.close()
-    return render_template('editar.html', pessoa=pessoa)
+    if request.method == 'POST':
+        pessoa.nome = request.form['nome']
+        pessoa.idade = request.form['idade']
+        pessoa.email = request.form['email']
+        
+        db.session.commit()
+        return redirect(url_for('pessoas'))  # Redireciona para a lista de pessoas
+
+    return render_template('editar.html', pessoa=pessoa)  # Página de edição
+
+# Chamando a função de criar tabelas logo após a inicialização
+create_tables()
 
 if __name__ == '__main__':
-    criar_tabela()  # Cria a tabela 'pessoa' se ela não existir
     app.run(debug=True)
