@@ -10,7 +10,8 @@
 
     <h1>Cadastro de Pessoas</h1>
 
-    <form action="./pessoa" method="POST" class="form">
+    <!-- Formulário para criar nova pessoa -->
+    <form action="/pessoa" method="POST" class="form">
         <input type="text" name="nome" placeholder="Nome" required>
         <input type="number" name="idade" placeholder="Idade" required>
         <input type="email" name="email" placeholder="Email" required>
@@ -29,15 +30,17 @@
             </tr>
         </thead>
         <tbody>
+            <!-- Loop para exibir as pessoas cadastradas -->
             {% for pessoa in pessoas %}
                 <tr>
-                    <td>{{ pessoa[0] }}</td>
-                    <td>{{ pessoa[1] }}</td>
-                    <td>{{ pessoa[2] }}</td>
-                    <td>{{ pessoa[3] }}</td>
+                    <td>{{ pessoa.id }}</td>   <!-- Acessa o atributo 'id' do objeto pessoa -->
+                    <td>{{ pessoa.nome }}</td> <!-- Acessa o atributo 'nome' do objeto pessoa -->
+                    <td>{{ pessoa.idade }}</td> <!-- Acessa o atributo 'idade' do objeto pessoa -->
+                    <td>{{ pessoa.email }}</td> <!-- Acessa o atributo 'email' do objeto pessoa -->
                     <td>
-                        <a href="/pessoa/{{ pessoa[0] }}">Editar</a> |
-                        <a href="/excluir/{{ pessoa[0] }}">Excluir</a>
+                        <!-- Links para editar e excluir -->
+                        <a href="/pessoa/{{ pessoa.id }}">Editar</a> |
+                        <a href="/excluir/{{ pessoa.id }}">Excluir</a>
                     </td>
                 </tr>
             {% endfor %}
