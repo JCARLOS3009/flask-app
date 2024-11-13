@@ -1,17 +1,19 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
+app.secret_key = 'sua_chave_secreta'  # Necessário para exibir mensagens de erro com `flash`
 
 # Configuração da conexão com o banco de dados PostgreSQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://default:Ew4LKOoIpBv5@ep-falling-hall-a43wfsot.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desabilita rastreabilidade de modificações
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 # Definindo o modelo de dados (Tabela "pessoa")
 class Pessoa(db.Model):
-    __tablename__ = 'pessoa'  # Nome da tabela no banco
+    __tablename__ = 'pessoa'
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), nullable=False)
@@ -24,18 +26,16 @@ class Pessoa(db.Model):
 # Criar as tabelas no banco de dados (em vez de usar @app.before_first_request)
 def create_tables():
     with app.app_context():
-        db.create_all()  # Cria as tabelas no banco de dados
+        db.create_all()
 
-# Página inicial que redireciona para /pessoas
 @app.route('/')
 def home():
-    return redirect(url_for('pessoas'))  # Redireciona para a rota que lista as pessoas
+    return redirect(url_for('pessoas'))
 
-# Página que lista todas as pessoas
 @app.route('/pessoas')
 def pessoas():
-    pessoas = Pessoa.query.all()  # Consulta todas as pessoas
-    return render_template('index.html', pessoas=pessoas)  # Renderiza a página com a lista
+    pessoas = Pessoa.query.all()
+    return render_template('index.html', pessoas=pessoas)
 
 # Criar uma nova pessoa
 @app.route('/pessoa', methods=['POST'])
@@ -44,23 +44,32 @@ def criar_pessoa():
     idade = request.form['idade']
     email = request.form['email']
 
-    # Cria um novo objeto Pessoa e adiciona ao banco
+    # Verificar se o e-mail já existe
+    pessoa_existente = Pessoa.query.filter_by(email=email).first()
+    if pessoa_existente:
+        flash(f"O e-mail {email} já está registrado. Por favor, utilize outro e-mail.")
+        return redirect(url_for('pessoas'))
+
+    # Tentar adicionar a nova pessoa ao banco
     nova_pessoa = Pessoa(nome=nome, idade=idade, email=email)
     db.session.add(nova_pessoa)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash(f"O e-mail {email} já está registrado.")
+        return redirect(url_for('pessoas'))
 
-    return redirect(url_for('pessoas'))  # Redireciona para a página que lista as pessoas
+    return redirect(url_for('pessoas'))
 
-# Excluir uma pessoa
 @app.route('/excluir/<int:id>', methods=['GET'])
 def excluir(id):
     pessoa = Pessoa.query.get(id)
     if pessoa:
         db.session.delete(pessoa)
         db.session.commit()
-    return redirect(url_for('pessoas'))  # Redireciona para a lista de pessoas
+    return redirect(url_for('pessoas'))
 
-# Editar uma pessoa
 @app.route('/pessoa/<int:id>', methods=['GET', 'POST'])
 def editar(id):
     pessoa = Pessoa.query.get(id)
@@ -69,13 +78,19 @@ def editar(id):
         pessoa.nome = request.form['nome']
         pessoa.idade = request.form['idade']
         pessoa.email = request.form['email']
-        
-        db.session.commit()
-        return redirect(url_for('pessoas'))  # Redireciona para a lista de pessoas
 
-    return render_template('editar.html', pessoa=pessoa)  # Página de edição
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Erro ao atualizar: e-mail já está em uso.")
+            return redirect(url_for('editar', id=id))
 
-# Chamando a função de criar tabelas logo após a inicialização
+        return redirect(url_for('pessoas'))
+
+    return render_template('editar.html', pessoa=pessoa)
+
+# Chamando a função de criar tabelas
 create_tables()
 
 if __name__ == '__main__':
